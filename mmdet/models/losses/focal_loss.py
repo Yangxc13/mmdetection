@@ -32,6 +32,14 @@ def sigmoid_focal_loss(pred,
                        alpha=0.25,
                        reduction='mean',
                        avg_factor=None):
+    '''
+      pred: [num_points, C]
+      targets: [num_points] value in {-1,0,1,...,C}, -1 means ignorance, 0 means background
+
+      p = sigmoid(pred)
+      loss = - alpha*(label==对应label) * (1-p)**gamma * log(p) - (1-alpha)*(label!=对应label or label==negative) * p**gamma * log(1-p)
+      参考: https://github.com/pytorch/pytorch/blob/master/modules/detectron/sigmoid_focal_loss_op.cc
+    '''
     # Function.apply does not accept keyword arguments, so the decorator
     # "weighted_loss" is not applicable
     loss = _sigmoid_focal_loss(pred, target, gamma, alpha)

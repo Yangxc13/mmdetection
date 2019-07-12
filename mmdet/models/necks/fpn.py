@@ -95,6 +95,7 @@ class FPN(nn.Module):
                 xavier_init(m, distribution='uniform')
 
     def forward(self, inputs):
+        # inputs: C1, C2, C3, C4
         assert len(inputs) == len(self.in_channels)
 
         # build laterals
@@ -113,7 +114,7 @@ class FPN(nn.Module):
         # part 1: from original levels
         outs = [
             self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels)
-        ]
+        ] # P2, P3, P4, P5
         # part 2: add extra levels
         if self.num_outs > len(outs):
             # use max pool to get more levels on top of outputs
@@ -125,12 +126,12 @@ class FPN(nn.Module):
             else:
                 if self.extra_convs_on_inputs:
                     orig = inputs[self.backbone_end_level - 1]
-                    outs.append(self.fpn_convs[used_backbone_levels](orig))
+                    outs.append(self.fpn_convs[used_backbone_levels](orig)) # P6
                 else:
                     outs.append(self.fpn_convs[used_backbone_levels](outs[-1]))
                 for i in range(used_backbone_levels + 1, self.num_outs):
                     if self.relu_before_extra_convs:
-                        outs.append(self.fpn_convs[i](F.relu(outs[-1])))
+                        outs.append(self.fpn_convs[i](F.relu(outs[-1]))) # P7. 这里加ReLU应该是为了引入非线性变换，不然P6～P7就是两层conv层
                     else:
                         outs.append(self.fpn_convs[i](outs[-1]))
         return tuple(outs)

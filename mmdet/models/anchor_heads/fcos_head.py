@@ -121,16 +121,16 @@ class FCOSHead(nn.Module):
              cfg,
              gt_bboxes_ignore=None):
         assert len(cls_scores) == len(bbox_preds) == len(centernesses)
-        featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores]
+        featmap_sizes = [featmap.size()[-2:] for featmap in cls_scores] # [[152, 100], [76, 50], [38, 25], [19, 13], [10, 7]]
         all_level_points = self.get_points(featmap_sizes, bbox_preds[0].dtype,
-                                           bbox_preds[0].device)
+                                           bbox_preds[0].device) # len=5 list: each [h*w, 2] of (cx, cy) (for example, [15200, 2] for first element)
         labels, bbox_targets = self.fcos_target(all_level_points, gt_bboxes,
-                                                gt_labels)
+                                                gt_labels) # len=5 list: each [n*h*w]/[n*h*w, 4] (for example, [60800]/[60800, 4] or for first element)
 
         num_imgs = cls_scores[0].size(0)
         # flatten cls_scores, bbox_preds and centerness
         flatten_cls_scores = [
-            cls_score.permute(0, 2, 3, 1).reshape(-1, self.cls_out_channels)
+            cls_score.permute(0, 2, 3, 1).reshape(-1, self.cls_out_channels) # [n,c,h,w]->[n*h*w,c]
             for cls_score in cls_scores
         ]
         flatten_bbox_preds = [
@@ -143,9 +143,9 @@ class FCOSHead(nn.Module):
         ]
         flatten_cls_scores = torch.cat(flatten_cls_scores)
         flatten_bbox_preds = torch.cat(flatten_bbox_preds)
-        flatten_centerness = torch.cat(flatten_centerness)
-        flatten_labels = torch.cat(labels)
-        flatten_bbox_targets = torch.cat(bbox_targets)
+        flatten_centerness = torch.cat(flatten_centerness) # [pyramid_level*n*h*w,c]
+        flatten_labels = torch.cat(labels) # [pyramid_level*n*h*w]
+        flatten_bbox_targets = torch.cat(bbox_targets) # [pyramid_level*n*h*w,4]
         # repeat points to align with bbox_preds
         flatten_points = torch.cat(
             [points.repeat(num_imgs, 1) for points in all_level_points])
@@ -174,7 +174,7 @@ class FCOSHead(nn.Module):
                 avg_factor=pos_centerness_targets.sum())
             loss_centerness = self.loss_centerness(pos_centerness,
                                                    pos_centerness_targets)
-        else:
+        else: # TODO ERROR 这里我真的没有看明白
             loss_bbox = pos_bbox_preds.sum()
             loss_centerness = pos_centerness.sum()
 
@@ -189,7 +189,7 @@ class FCOSHead(nn.Module):
                    centernesses,
                    img_metas,
                    cfg,
-                   rescale=None):
+                   rescale=None): # only for test
         assert len(cls_scores) == len(bbox_preds)
         num_levels = len(cls_scores)
 
@@ -291,7 +291,7 @@ class FCOSHead(nn.Module):
             0, h * stride, stride, dtype=dtype, device=device)
         y, x = torch.meshgrid(y_range, x_range)
         points = torch.stack(
-            (x.reshape(-1), y.reshape(-1)), dim=-1) + stride // 2
+            (x.reshape(-1), y.reshape(-1)), dim=-1) + stride // 2 # 移动到中心位置
         return points
 
     def fcos_target(self, points, gt_bboxes_list, gt_labels_list):
@@ -333,14 +333,14 @@ class FCOSHead(nn.Module):
         return concat_lvl_labels, concat_lvl_bbox_targets
 
     def fcos_target_single(self, gt_bboxes, gt_labels, points, regress_ranges):
-        num_points = points.size(0)
+        num_points = points.size(0) # size of the feature map
         num_gts = gt_labels.size(0)
 
         areas = (gt_bboxes[:, 2] - gt_bboxes[:, 0] + 1) * (
             gt_bboxes[:, 3] - gt_bboxes[:, 1] + 1)
         # TODO: figure out why these two are different
         # areas = areas[None].expand(num_points, num_gts)
-        areas = areas[None].repeat(num_points, 1)
+        areas = areas[None].repeat(num_points, 1) # [None] 相当于 .unsqueeze(0)
         regress_ranges = regress_ranges[:, None, :].expand(
             num_points, num_gts, 2)
         gt_bboxes = gt_bboxes[None].expand(num_points, num_gts, 4)

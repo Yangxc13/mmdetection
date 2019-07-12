@@ -508,11 +508,11 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.norm1(x)
         x = self.relu(x)
-        x = self.maxpool(x)
+        x = self.maxpool(x) # C1
         outs = []
         for i, layer_name in enumerate(self.res_layers):
             res_layer = getattr(self, layer_name)
-            x = res_layer(x)
+            x = res_layer(x) # C2~C5
             if i in self.out_indices:
                 outs.append(x)
         return tuple(outs)

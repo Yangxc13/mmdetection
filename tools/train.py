@@ -54,7 +54,8 @@ def main():
         cfg.work_dir = args.work_dir
     if args.resume_from is not None:
         cfg.resume_from = args.resume_from
-    cfg.gpus = args.gpus
+    if cfg.get('gpus', 1) == 1:
+        cfg.gpus = args.gpus
 
     # init distributed env first, since logger depends on the dist info.
     if args.launcher == 'none':

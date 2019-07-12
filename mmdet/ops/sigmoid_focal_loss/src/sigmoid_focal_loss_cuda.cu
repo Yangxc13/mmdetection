@@ -52,9 +52,9 @@ __global__ void SigmoidFocalLossForward(const int nthreads,
          logf(1. + expf(logits[i] - 2. * logits[i] * (logits[i] >= 0))));
 
     losses[i] = 0.0;
-    losses[i] += -c1 * term1 * zp;
-    losses[i] += -c2 * term2 * zn;
-
+    losses[i] += -c1 * term1 * zp; // positive
+    losses[i] += -c2 * term2 * zn; // negative
+    // else if targets == -1, nothing happends
   }  // CUDA_1D_KERNEL_LOOP
 }  // SigmoidFocalLossForward
 
